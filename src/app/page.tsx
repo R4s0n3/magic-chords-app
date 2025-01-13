@@ -4,6 +4,7 @@ import { chords} from "@/util/chords/statics";
 import ChordItem from "./_components/chord-item";
 
 import { useChordProgression } from "@/util/chord-hook";
+import AdBanner from "./_components/ad-banner";
 
 export default function Home() {
   const [pickedChord, setPickedChord] = useState<string | null>(null)
@@ -46,7 +47,7 @@ export default function Home() {
       </div>
       </div>
      </div>
-     <span className="text-xs w-full max-w-xl"><b className=" text-red-400">disclaimer:</b> Please be advised that this tool is not a certified hit-making machine nor does it come with a guarantee of success. We also extend our sincerest apologies for any unintentional ear-related mishaps resulting from the use of this app.</span>
+     <AdBanner />
     </main>
   );
 }
