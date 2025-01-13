@@ -38,12 +38,7 @@ export async function setupSynth() {
   });
 
   synth.chain(bitCrusher, delay, reverb);
+ 
 }
 
 export { synth };
-// export function cleanup() {
-//     synth.dispose();
-//     reverb.dispose();
-//     bitCrusher.dispose();
-//     delay.dispose();
-// }

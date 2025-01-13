@@ -10,7 +10,9 @@ export async function playChord(chord: ChordName, timing?: ChordTiming) {
   }
 
   const notes = voicing.open;
-  const duration = timing?.duration ?? '2n';
+  const duration = timing?.duration ?? '8n';
+
+
 
   // Stagger the notes slightly for a more natural sound
   const now = Tone.now();
