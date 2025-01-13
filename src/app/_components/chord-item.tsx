@@ -20,7 +20,7 @@ export default function ChordItem (props: ChordItemProps){
     }
 
     return <button 
-        className={`w-full p-2 h-full text-center flex justify-center items-center flex-1 bg-amber-400`}
+        className={`w-full p-2 h-full text-center flex justify-center items-center transition-all duration-500 flex-1 bg-gradient-to-br from-amber-400 to-amber-300 hover:to-amber-500`}
         onClick={handleClickedChordItem}
     >
         {chord ?? pickedChord ?? "pause"}

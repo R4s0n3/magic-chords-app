@@ -36,21 +36,13 @@ export default function Home() {
           {
           pickedChord 
           ? 
-          <button onClick={() => {
-            setPickedChord(null)
-          }} className=" drop-shadow-md border p-4 border-amber-600 w-full h-full text-amber-50 bg-amber-600/20 hover:bg-amber-600/40 font-black text-2xl">{pickedChord}</button> 
+          <button onClick={() => setPickedChord(null)} className=" drop-shadow-md border p-4 border-amber-600 w-full h-full text-amber-50 bg-amber-600/20 hover:bg-amber-600/40 font-black text-2xl">{pickedChord}</button> 
           : 
           <span className="font-light text-xl md:text-sm p-4 text-center">Your picked chord will be displayed here.</span>
           }
       </div>
       <div className="flex-[3] border border-amber-400/20 p-2">
-      {
-          progression 
-          ? 
-          <div  className="flex justify-between items-center w-full h-full text-amber-50 font-bold text-2xl gap-2">{progression.map((cp,idx) => <ChordItem key={idx} pickedChord={pickedChord as ChordName} chord={cp as ChordName} />)}</div> 
-          : 
-          <span className="font-light text-xl p-4 text-center w-full h-full justify-center items-center flex">Chord Progression goes here...</span>
-          }
+      <div  className="flex justify-between items-center text-center w-full h-full text-amber-50 font-bold text-2xl gap-2">{progression.length > 0 ? progression.map((cp,idx) => <ChordItem key={idx} pickedChord={pickedChord as ChordName} chord={cp as ChordName} />) : <span className="block w-full">progression goes here.</span>}</div>  
       </div>
       </div>
      </div>

@@ -5,10 +5,13 @@ import { resolveChordSymbol } from "./chords/functions";
 
 export function useChordProgression(pickedChord: string | null) {
     const [progression, setProgression] = useState<string[]>([]);
-  
+
     useEffect(() => {
-      if (!pickedChord) return;
-  
+      if (!pickedChord) {
+        setProgression([]);
+        return;
+    }
+
       const isMinor = pickedChord.endsWith('m');
       const progressionType = isMinor ? 'minor' : 'major';
       const style = 'basic';

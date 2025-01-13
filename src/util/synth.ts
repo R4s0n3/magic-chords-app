@@ -11,7 +11,7 @@ export async function setupSynth() {
   
   synth = new Tone.PolySynth(Tone.Synth, {
     oscillator: { 
-      type: "square",
+      type: "triangle1",
     },
     envelope: {
       attack: 0.001,
@@ -22,7 +22,7 @@ export async function setupSynth() {
     volume: -30,
   }).toDestination();
 
-  bitCrusher = new Tone.BitCrusher(2).set({
+  bitCrusher = new Tone.BitCrusher(4).set({
     wet: 0.8
   });
 
@@ -32,7 +32,7 @@ export async function setupSynth() {
   }).toDestination();
 
   delay = new Tone.FeedbackDelay({
-    delayTime: "16n",
+    delayTime: "2n",
     feedback: 0.2,
     wet: 0.1
   });
