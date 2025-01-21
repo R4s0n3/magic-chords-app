@@ -4,7 +4,6 @@ import { chords} from "@/util/chords/statics";
 import ChordItem from "./_components/chord-item";
 
 import { useChordProgression } from "@/util/chord-hook";
-import AdBanner from "./_components/ad-banner";
 
 export default function Home() {
   const [pickedChord, setPickedChord] = useState<string | null>(null)
@@ -29,7 +28,6 @@ export default function Home() {
     )}
      </div>
      </div>
-     <AdBanner />
      <div className="w-full max-w-xl">
       <div className="w-full text-center mb-4">Click the buttons to make a sound!</div>
       <div className="flex gap-6 flex-col md:flex-row ">
