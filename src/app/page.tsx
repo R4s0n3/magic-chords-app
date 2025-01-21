@@ -29,6 +29,7 @@ export default function Home() {
     )}
      </div>
      </div>
+     <AdBanner />
      <div className="w-full max-w-xl">
       <div className="w-full text-center mb-4">Click the buttons to make a sound!</div>
       <div className="flex gap-6 flex-col md:flex-row ">
@@ -47,7 +48,7 @@ export default function Home() {
       </div>
       </div>
      </div>
-     <AdBanner />
+   
     </main>
   );
 }
