@@ -19,7 +19,7 @@ export async function setupSynth() {
       sustain: 0.123,
       release: 0.1,
     },
-    volume: -20,
+    volume: -5,
   }).toDestination();
 
   bitCrusher = new Tone.BitCrusher(2).set({ // Increased bit depth from 4 to 8
