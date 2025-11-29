@@ -4,6 +4,7 @@ import { chords, majorScales, minorScales } from "@/util/chords/statics";
 import { useChordProgression } from "@/util/chord-hook";
 import { useSequencer } from "@/util/use-sequencer";
 import { updateSynth, updateEffects } from "@/util/synth";
+import Image from "next/image";
 import type { SynthParams } from "@/util/synth";
 import type { VoicingType, PatternType } from "@/util/chords/functions";
 import type { Genre } from "@/util/chords/progressions";
@@ -131,8 +132,8 @@ export default function Home() {
     <main className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-amber-500/30">
       <header className="border-b border-zinc-800 p-6 flex justify-between items-center bg-zinc-900/50 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg shadow-orange-500/20">
-            <Music className="text-white w-6 h-6" />
+          <div className="w-10 h-10 bg-gradient-to-br relative from-amber-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg shadow-orange-500/20">
+            <Image src="/logo.png" alt="logo" fill className="text-white w-6 h-6" />
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-zinc-100 uppercase">Magic<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">Chords</span></h1>
