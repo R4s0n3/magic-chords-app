@@ -139,34 +139,36 @@ export default function Home() {
             <p className="text-xs text-zinc-500 font-medium tracking-wider uppercase">Producers Edition</p>
           </div>
         </div>
+      </header>
 
-        <div className="flex items-center gap-6 bg-zinc-900 p-2 px-4 rounded-full border border-zinc-800 fixed mt-44 mx-auto">
-          <div className="flex items-center gap-3">
-            <Activity className="w-4 h-4 text-zinc-500" />
-            <div className="flex flex-col">
-              <label className="text-[10px] uppercase text-zinc-500 font-bold">BPM</label>
-              <input
-                type="number"
-                value={bpm}
-                onChange={(e) => setBpm(Number(e.target.value))}
-                className="bg-transparent w-12 font-mono font-bold text-amber-500 focus:outline-none text-center"
-                min={40} max={240}
-              />
-            </div>
+
+      <div className="flex items-center gap-6 bg-zinc-900 p-2 px-4 rounded-full border border-zinc-800 fixed bottom-4 sm:bottom-auto sm:top-4 left-auto right-4 z-50">
+        <div className="flex items-center gap-3">
+          <Activity className="w-4 h-4 text-zinc-500" />
+          <div className="flex flex-col">
+            <label className="text-[10px] uppercase text-zinc-500 font-bold">BPM</label>
+            <input
+              type="number"
+              value={bpm}
+              onChange={(e) => setBpm(Number(e.target.value))}
+              className="bg-transparent w-12 font-mono font-bold text-amber-500 focus:outline-none text-center"
+              min={40} max={240}
+            />
           </div>
+        </div>
 
-          <div className="h-8 w-px bg-zinc-800 mx-2"></div>
+        <div className="h-8 w-px bg-zinc-800 mx-2"></div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={togglePlay}
-              className={`${isPlaying ? 'bg-zinc-800 text-red-400' : 'bg-amber-500 text-zinc-950 hover:bg-amber-400'} p-3 rounded-full transition-all active:scale-95 shadow-lg`}
-            >
-              {isPlaying ? <Square className="fill-current w-5 h-5" /> : <Play className="fill-current w-5 h-5 ml-0.5" />}
-            </button>
-          </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={togglePlay}
+            className={`${isPlaying ? 'bg-zinc-800 text-red-400' : 'bg-amber-500 text-zinc-950 hover:bg-amber-400'} p-3 rounded-full transition-all active:scale-95 shadow-lg`}
+          >
+            {isPlaying ? <Square className="fill-current w-5 h-5" /> : <Play className="fill-current w-5 h-5 ml-0.5" />}
+          </button>
+        </div>
 
-          {/*         <div className="h-8 w-px bg-zinc-800 mx-2"></div>
+        {/*         <div className="h-8 w-px bg-zinc-800 mx-2"></div>
           <button
             onClick={() => pickedChord && downloadMidi(progressionStrings, bpm, voicing)}
             disabled={!pickedChord}
@@ -175,9 +177,7 @@ export default function Home() {
           >
             <Download className="w-5 h-5" />
           </button> */}
-        </div>
-      </header>
-
+      </div>
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         <aside className="w-full md:w-80 border-r border-zinc-800 bg-zinc-900/30 p-6 overflow-y-auto">
           <h2 className="text-sm font-bold text-zinc-500 uppercase mb-4 flex items-center gap-2">
