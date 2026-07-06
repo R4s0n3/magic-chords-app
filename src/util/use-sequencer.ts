@@ -3,13 +3,16 @@ import * as Tone from 'tone';
 import { playChord, playBass } from './chords/functions';
 import type { VoicingType, PatternType } from './chords/functions';
 import { setupSynth } from './synth';
+import { setupDrums, playDrumBar } from './drums';
+import type { DrumBeat } from './drums';
 
 export function useSequencer(
-    progression: string[], 
-    bpm = 120, 
+    progression: string[],
+    bpm = 120,
     voicing: VoicingType = 'open',
     pattern: PatternType = 'strum',
-    enableBass = false
+    enableBass = false,
+    drumBeat: DrumBeat | null = null
 ) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState<number>(-1);
@@ -41,7 +44,11 @@ export function useSequencer(
           if (enableBass) {
               void playBass(chordName, { time, duration: '1m' });
           }
-          
+
+          if (drumBeat) {
+              playDrumBar(drumBeat, time);
+          }
+
           Tone.Draw.schedule(() => {
               setCurrentStep(value.idx);
           }, time);
@@ -53,10 +60,11 @@ export function useSequencer(
       return () => {
           partRef.current?.dispose();
       };
-  }, [progression, voicing, pattern, enableBass]);
+  }, [progression, voicing, pattern, enableBass, drumBeat]);
 
   const togglePlay = async () => {
       await setupSynth();
+      await setupDrums();
       await Tone.start();
       
       if (isPlaying) {

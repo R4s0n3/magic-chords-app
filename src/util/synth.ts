@@ -32,11 +32,13 @@ const currentSynthParams: SynthParams = {
   volume: -8 // Lower volume to mix better with bass
 };
 
+let bassVolumeDb = -4;
+
 export async function setupSynth() {
-  if (synth) return; 
-  
+  if (synth) return;
+
   await Tone.start();
-  
+
   // Main Poly Synth (Chords)
   synth = new Tone.PolySynth(Tone.Synth, {
     oscillator: { type: currentSynthParams.oscillatorType },
@@ -49,7 +51,7 @@ export async function setupSynth() {
     oscillator: { type: "fatsawtooth" },
     envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 0.5 },
     filterEnvelope: { attack: 0.001, decay: 0.1, sustain: 0.2, release: 1, baseFrequency: 200, octaves: 2.6 },
-    volume: -4
+    volume: bassVolumeDb
   }).toDestination();
 
   bitCrusher = new Tone.BitCrusher(4).set({ wet: 0 });
@@ -65,6 +67,17 @@ export async function setupSynth() {
 
 export function getSynth() { return synth; }
 export function getBassSynth() { return bassSynth; }
+
+// Volume setters work before setup too: values are stored and applied on creation
+export function setChordsVolume(db: number) {
+  currentSynthParams.volume = db;
+  if (synth) synth.volume.value = db;
+}
+
+export function setBassVolume(db: number) {
+  bassVolumeDb = db;
+  if (bassSynth) bassSynth.volume.value = db;
+}
 
 export function updateSynth(params: Partial<SynthParams>) {
   if (!synth) return;

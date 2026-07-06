@@ -1,76 +1,16 @@
 import * as Tone from "tone";
-import { chordVoicings } from "../voicings";
 import { getSynth, getBassSynth } from "../synth";
+import {
+  getChordNotes,
+  getRootFromChord,
+  transposeNote,
+  shiftOctave,
+} from "./notes";
 
-export type VoicingType = "root" | "first" | "second" | "open" | "extended";
-export type PatternType =
-  | "strum"
-  | "pad"
-  | "arp-up"
-  | "arp-down"
-  | "pulse"
-  | "melody";
-
-const NOTE_NAMES = [
-  "C",
-  "C#",
-  "D",
-  "D#",
-  "E",
-  "F",
-  "F#",
-  "G",
-  "G#",
-  "A",
-  "A#",
-  "B",
-];
-const FLAT_NORMALIZATION: Record<string, string> = {
-  Db: "C#",
-  Eb: "D#",
-  Gb: "F#",
-  Ab: "G#",
-  Bb: "A#",
-  Cb: "B",
-  Fb: "E",
-};
-
-function normalizeNote(note: string): string {
-  if (!note) return "C";
-  const pitch = note.replace(/[0-9]/g, "");
-  if (FLAT_NORMALIZATION[pitch]) return FLAT_NORMALIZATION[pitch];
-  return pitch;
-}
-
-function getRootFromChord(chord: string): string {
-  if (!chord) return "C";
-  const match = chord.match(/^([A-G][#b]?)/);
-  return match?.[1] ? normalizeNote(match[1]) : "C";
-}
-
-function transposeNote(note: string, semitones: number): string {
-  const root = normalizeNote(note);
-  const idx = NOTE_NAMES.indexOf(root);
-  if (idx === -1) return root;
-
-  let newIdx = (idx + semitones) % 12;
-  if (newIdx < 0) newIdx += 12;
-
-  return NOTE_NAMES[newIdx] ?? root;
-}
-
-/**
- * Fast helper to shift octave of a note string.
- * e.g., "C3" + 1 -> "C4". "F#2" + 2 -> "F#4".
- */
-function shiftOctave(note: string, shift: number): string {
-  const match = note.match(/^([A-G][#b]?)(-?\d+)$/);
-  if (!match?.[1] || !match[2]) return note; // fallback if no octave found (should not happen with voicings)
-
-  const pitch = match[1];
-  const oct = parseInt(match[2], 10);
-  return `${pitch}${oct + shift}`;
-}
+// Re-export the pure helpers so existing imports keep working
+export { getChordNotes, getRootFromChord, shiftOctave } from "./notes";
+export type { VoicingType, PatternType } from "./notes";
+import type { VoicingType, PatternType } from "./notes";
 
 export async function playChord(
   chord: ChordName,
@@ -78,25 +18,8 @@ export async function playChord(
   voicingType: VoicingType = "open",
   pattern: PatternType = "strum",
 ) {
-  if (!chord) return;
-
-  let voicing = chordVoicings[chord];
-
-  if (!voicing) {
-    const root = getRootFromChord(chord);
-    const baseKey = Object.keys(chordVoicings).find(
-      (k) => k === root || normalizeNote(k) === root,
-    );
-    if (baseKey) voicing = chordVoicings[baseKey];
-  }
-
-  if (!voicing) return;
-
-  const baseNotes = voicing[voicingType] || voicing.open || voicing.root;
-  if (!baseNotes) return;
-
-  // FAST OCTAVE SHIFT (String based)
-  const notes = baseNotes.map((n) => shiftOctave(n, 1));
+  const notes = getChordNotes(chord, voicingType);
+  if (notes.length === 0) return;
 
   const duration = timing?.duration ?? "1m";
   const startTime = timing?.time ?? Tone.now();

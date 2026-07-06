@@ -1,15 +1,21 @@
 'use client'
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { chords, majorScales, minorScales } from "@/util/chords/statics";
 import { useChordProgression } from "@/util/chord-hook";
 import { useSequencer } from "@/util/use-sequencer";
-import { updateSynth, updateEffects } from "@/util/synth";
+import { updateSynth, updateEffects, setChordsVolume, setBassVolume } from "@/util/synth";
+import { setDrumsVolume } from "@/util/drums";
 import Image from "next/image";
 import type { SynthParams } from "@/util/synth";
 import type { VoicingType, PatternType } from "@/util/chords/functions";
 import type { Genre } from "@/util/chords/progressions";
-import { downloadMidi } from "@/util/midi-export";
-import { Play, Square, RefreshCcw, Zap, Sliders, Music, Volume2, Activity, Download, Layers, Radio, Plus, X, Wand2 } from "lucide-react";
+import { downloadMidiStems } from "@/util/midi-export";
+import type { StemType } from "@/util/midi-export";
+import { generateDrumBeat } from "@/util/drums";
+import { setMelodyVolume } from "@/util/melody-synth";
+import { useMelody } from "@/util/use-melody";
+import { PianoRoll } from "./_components/piano-roll";
+import { Play, Square, RefreshCcw, Zap, Sliders, Music, Volume2, Activity, Download, Layers, Radio, Plus, X, Wand2, Dices, Piano } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -30,6 +36,10 @@ import { SortableChord } from "./_components/sortable-chord";
 // Helper to generate unique IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
+// Map a 0..1 fader position to dB around the instrument's default mix level
+const faderToDb = (value: number, baseDb: number) =>
+  value <= 0 ? -Infinity : baseDb + 20 * Math.log10(value);
+
 export default function Home() {
   const [pickedChord, setPickedChord] = useState<string | null>(null);
   const [bpm, setBpm] = useState(100);
@@ -37,6 +47,13 @@ export default function Home() {
   const [pattern, setPattern] = useState<PatternType>('strum');
   const [genre, setGenre] = useState<Genre>('jazz');
   const [enableBass, setEnableBass] = useState(false);
+  const [enableDrums, setEnableDrums] = useState(false);
+  const [drumSeed, setDrumSeed] = useState(1);
+  const [showExport, setShowExport] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
+
+  // Same (genre, seed) always renders the same beat, so playback & MIDI export match
+  const drumBeat = useMemo(() => generateDrumBeat(genre, drumSeed), [genre, drumSeed]);
 
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -56,13 +73,45 @@ export default function Home() {
 
   // Sequencer uses only the chord names
   const progressionStrings = items.map(i => i.chord);
-  const { isPlaying, togglePlay, stop, currentStep } = useSequencer(progressionStrings, bpm, voicing, pattern, enableBass);
+  const { isPlaying, togglePlay, stop, currentStep } = useSequencer(progressionStrings, bpm, voicing, pattern, enableBass, enableDrums ? drumBeat : null);
+
+  // Piano roll: 4-bar fallback loop lets users jam before picking a progression
+  const [showPianoRoll, setShowPianoRoll] = useState(false);
+  const melodyBars = progressionStrings.length || 4;
+  const melody = useMelody(showPianoRoll, melodyBars, bpm);
+
+  const handleToggleRecord = () => {
+    if (!melody.isRecording && !isPlaying) void togglePlay();
+    melody.setIsRecording(!melody.isRecording);
+  };
 
   const [oscType, setOscType] = useState<SynthParams['oscillatorType']>('fatsine1');
   const [attack, setAttack] = useState(0.01);
   const [release, setRelease] = useState(1.0);
   const [reverbMix, setReverbMix] = useState(0.2);
   const [delayMix, setDelayMix] = useState(0.1);
+
+  // Mixer faders (0..1, 1 = default mix level)
+  const [chordsVol, setChordsVol] = useState(1);
+  const [bassVol, setBassVol] = useState(1);
+  const [drumsVol, setDrumsVol] = useState(1);
+  const [melodyVol, setMelodyVol] = useState(1);
+
+  useEffect(() => {
+    setMelodyVolume(faderToDb(melodyVol, -6));
+  }, [melodyVol]);
+
+  useEffect(() => {
+    setChordsVolume(faderToDb(chordsVol, -8));
+  }, [chordsVol]);
+
+  useEffect(() => {
+    setBassVolume(faderToDb(bassVol, -4));
+  }, [bassVol]);
+
+  useEffect(() => {
+    setDrumsVolume(faderToDb(drumsVol, 0));
+  }, [drumsVol]);
 
   // DnD Sensors
   const sensors = useSensors(
@@ -105,6 +154,29 @@ export default function Home() {
     setIsManualMode(false);
     setRefreshKey(prev => prev + 1);
   };
+
+  const handleExport = (stem: StemType) => {
+    downloadMidiStems(stem, {
+      progression: progressionStrings,
+      bpm,
+      voicing,
+      pattern,
+      includeBass: enableBass,
+      includeDrums: enableDrums,
+      drumBeat,
+      melody: melody.notes,
+    });
+    setShowExport(false);
+  };
+
+  useEffect(() => {
+    if (!showExport) return;
+    const close = (e: PointerEvent) => {
+      if (!exportRef.current?.contains(e.target as Node)) setShowExport(false);
+    };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [showExport]);
 
   const availableChords = pickedChord
     ? (pickedChord.endsWith('m') ? minorScales[pickedChord] : majorScales[pickedChord])
@@ -169,15 +241,52 @@ export default function Home() {
           </button>
         </div>
 
-        {/*         <div className="h-8 w-px bg-zinc-800 mx-2"></div>
+        <div className="h-8 w-px bg-zinc-800 mx-2"></div>
+
+        <button
+          onClick={() => setShowPianoRoll(prev => !prev)}
+          className={`${showPianoRoll ? 'text-amber-400 bg-zinc-800' : 'text-zinc-400'} hover:text-zinc-200 p-2 rounded-full transition-colors`}
+          title="Piano Roll"
+        >
+          <Piano className="w-5 h-5" />
+        </button>
+
+        <div className="relative" ref={exportRef}>
           <button
-            onClick={() => pickedChord && downloadMidi(progressionStrings, bpm, voicing)}
-            disabled={!pickedChord}
-            className="text-zinc-400 hover:text-zinc-200 disabled:opacity-30 disabled:cursor-not-allowed p-2 rounded-full transition-colors"
-            title="Export MIDI"
+            onClick={() => setShowExport(prev => !prev)}
+            disabled={items.length === 0 && melody.notes.length === 0}
+            className={`${showExport ? 'text-amber-400 bg-zinc-800' : 'text-zinc-400'} hover:text-zinc-200 disabled:opacity-30 disabled:cursor-not-allowed p-2 rounded-full transition-colors`}
+            title="Export MIDI Stems"
           >
             <Download className="w-5 h-5" />
-          </button> */}
+          </button>
+
+          {showExport && (
+            <div className="absolute right-0 bottom-full mb-3 sm:bottom-auto sm:top-full sm:mt-3 w-52 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl shadow-black/50 p-2 flex flex-col gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 px-2 py-1">Export MIDI Stems</span>
+              <button onClick={() => handleExport('full')} className="text-left px-3 py-2 rounded-lg text-xs font-bold text-zinc-200 hover:bg-zinc-800 hover:text-amber-400 transition-colors flex items-center justify-between">
+                Full Mix <span className="text-[9px] text-zinc-500 font-mono uppercase">Multitrack</span>
+              </button>
+              <div className="h-px bg-zinc-800 mx-2"></div>
+              <button onClick={() => handleExport('chords')} className="text-left px-3 py-2 rounded-lg text-xs font-bold text-zinc-400 hover:bg-zinc-800 hover:text-amber-400 transition-colors">
+                Chords Stem
+              </button>
+              <button onClick={() => handleExport('bass')} className="text-left px-3 py-2 rounded-lg text-xs font-bold text-zinc-400 hover:bg-zinc-800 hover:text-amber-400 transition-colors">
+                Bass Stem
+              </button>
+              <button onClick={() => handleExport('drums')} className="text-left px-3 py-2 rounded-lg text-xs font-bold text-zinc-400 hover:bg-zinc-800 hover:text-amber-400 transition-colors">
+                Drums Stem
+              </button>
+              <button
+                onClick={() => handleExport('melody')}
+                disabled={melody.notes.length === 0}
+                className="text-left px-3 py-2 rounded-lg text-xs font-bold text-zinc-400 hover:bg-zinc-800 hover:text-amber-400 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+              >
+                Melody Stem
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         <aside className="w-full md:w-80 border-r border-zinc-800 bg-zinc-900/30 p-6 overflow-y-auto">
@@ -264,6 +373,26 @@ export default function Home() {
               >
                 <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-transform ${enableBass ? 'left-6' : 'left-1'}`}></div>
               </button>
+            </div>
+
+            <div className="bg-zinc-900 p-2 rounded-lg border border-zinc-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase text-zinc-400">Drums</span>
+                <button
+                  onClick={() => setEnableDrums(!enableDrums)}
+                  className={`w-10 h-5 rounded-full transition-colors relative ${enableDrums ? 'bg-amber-500' : 'bg-zinc-700'}`}
+                >
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-transform ${enableDrums ? 'left-6' : 'left-1'}`}></div>
+                </button>
+              </div>
+              {enableDrums && (
+                <button
+                  onClick={() => setDrumSeed(prev => prev + 1)}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-amber-400 hover:border-zinc-600 transition-all"
+                >
+                  <Dices className="w-3 h-3" /> New Beat ({genre})
+                </button>
+              )}
             </div>
           </div>
         </aside>
@@ -377,8 +506,24 @@ export default function Home() {
             )}
           </div>
 
+          {showPianoRoll && (
+            <PianoRoll
+              notes={melody.notes}
+              activeNotes={melody.activeNotes}
+              bars={melodyBars}
+              isRecording={melody.isRecording}
+              octave={melody.octave}
+              onToggleRecord={handleToggleRecord}
+              onQuantize={melody.quantize}
+              onClear={melody.clear}
+              onRemoveNote={melody.removeNote}
+              getLoopProgress={melody.getLoopProgress}
+              onClose={() => setShowPianoRoll(false)}
+            />
+          )}
+
           <div className="bg-zinc-900 border-t border-zinc-800 p-6 md:h-48 relative z-20">
-            <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 h-full">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 h-full">
 
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
@@ -425,6 +570,34 @@ export default function Home() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-[10px] text-zinc-500 font-mono"><span>DELAY</span> <span>{(delayMix * 100).toFixed(0)}%</span></div>
                     <input type="range" min="0" max="0.5" step="0.01" value={delayMix} onChange={e => setDelayMix(Number(e.target.value))} className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-purple-500" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+                  <Sliders className="w-3 h-3" /> Mixer
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <label className="text-[10px] font-mono text-zinc-500 w-12">CHORDS</label>
+                    <input type="range" min="0" max="1" step="0.01" value={chordsVol} onChange={e => setChordsVol(Number(e.target.value))} className="flex-1 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-amber-500" />
+                    <span className="text-[10px] font-mono text-zinc-600 w-8 text-right">{(chordsVol * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="text-[10px] font-mono text-zinc-500 w-12">BASS</label>
+                    <input type="range" min="0" max="1" step="0.01" value={bassVol} onChange={e => setBassVol(Number(e.target.value))} className="flex-1 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-amber-500" />
+                    <span className="text-[10px] font-mono text-zinc-600 w-8 text-right">{(bassVol * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="text-[10px] font-mono text-zinc-500 w-12">DRUMS</label>
+                    <input type="range" min="0" max="1" step="0.01" value={drumsVol} onChange={e => setDrumsVol(Number(e.target.value))} className="flex-1 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-amber-500" />
+                    <span className="text-[10px] font-mono text-zinc-600 w-8 text-right">{(drumsVol * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="text-[10px] font-mono text-zinc-500 w-12">MELODY</label>
+                    <input type="range" min="0" max="1" step="0.01" value={melodyVol} onChange={e => setMelodyVol(Number(e.target.value))} className="flex-1 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-amber-500" />
+                    <span className="text-[10px] font-mono text-zinc-600 w-8 text-right">{(melodyVol * 100).toFixed(0)}%</span>
                   </div>
                 </div>
               </div>
